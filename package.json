@@ -1,0 +1,31 @@
+{
+  "name": "@redbtn/loop",
+  "version": "0.1.1",
+  "description": "LP-1 Loop SDK and attachable tool surface for redOps Operations and RedBtn fleet agents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/redbtn-io/loop.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.redbtn.io"
+  }
+}
