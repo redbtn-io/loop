@@ -31,7 +31,7 @@ export interface Lp1Control {
   reasonCode?: string;
   stopType?: 'soft' | 'hard';
   until?: string;
-  nextTickAt?: string;
+  nextTickAt?: Record<string, string> | string;
   setBy?: string | { email: string; userId: string; at: string };
   setAt?: string;
   [key: string]: unknown;
@@ -40,7 +40,9 @@ export interface Lp1Control {
 export interface LaneStatus {
   phase?: string;
   heartbeatAt?: string;
-  health?: 'ok' | 'degraded' | 'error' | 'unknown';
+  health?: 'ok' | 'blocked' | 'degraded' | 'error' | 'unknown' | 'healthy' | 'idle' | 'running' | 'paused';
+  runId?: string;
+  chainId?: string;
   lastResult?: Record<string, unknown> | null;
   activeTask?: string;
   [key: string]: unknown;
@@ -55,24 +57,29 @@ export interface Lp1Directive {
   priority: DirectivePriority;
   to?: string;
   author?: { kind: string; id: string } | string;
-  verifiedWriter?: { kind: string; email: string; at: string };
+  verifiedWriter?: { kind: string; email: string; at: string } | boolean;
   createdAt?: string;
   at?: string;
   expiresAt?: string;
-  status?: 'new' | 'acked' | 'active' | 'done' | 'rejected';
+  status?: 'new' | 'acked' | 'active' | 'done' | 'rejected' | 'failed' | 'cancelled';
   refs?: unknown[];
   [key: string]: unknown;
 }
 
 export interface Lp1Tick {
-  id: string;
+  id?: string;
+  chainId?: string;
   lane: string;
   runId?: string;
+  tick?: number;
   startedAt?: string;
+  endedAt?: string;
   at?: string;
   durationMs?: number;
   packBytes?: number;
   decision?: string;
+  decisions?: Array<{ type: string; [key: string]: unknown }>;
+  result?: Record<string, unknown> | null;
   text?: string;
   outcome?: string;
   evidence?: string;
@@ -183,7 +190,7 @@ export const LOOP_ATTACHABLE_TOOLS: AttachableLoopTool[] = [
         },
         action: {
           type: 'string',
-          enum: ['pause', 'resume', 'step', 'stop'],
+          enum: ['pause', 'resume', 'run', 'step', 'stop'],
           description: 'Lifecycle transition to execute.',
         },
         reason: {
@@ -281,7 +288,7 @@ export class LoopClient {
 
   async controlLoop(
     loopId: string,
-    action: 'pause' | 'resume' | 'step' | 'stop',
+    action: 'pause' | 'resume' | 'run' | 'step' | 'stop',
     reason?: string
   ): Promise<Record<string, unknown>> {
     const res = await fetch(`${this.baseUrl}/api/loops/${encodeURIComponent(loopId)}/control`, {

@@ -27,7 +27,7 @@ export interface Lp1Control {
     reasonCode?: string;
     stopType?: 'soft' | 'hard';
     until?: string;
-    nextTickAt?: string;
+    nextTickAt?: Record<string, string> | string;
     setBy?: string | {
         email: string;
         userId: string;
@@ -39,7 +39,9 @@ export interface Lp1Control {
 export interface LaneStatus {
     phase?: string;
     heartbeatAt?: string;
-    health?: 'ok' | 'degraded' | 'error' | 'unknown';
+    health?: 'ok' | 'blocked' | 'degraded' | 'error' | 'unknown' | 'healthy' | 'idle' | 'running' | 'paused';
+    runId?: string;
+    chainId?: string;
     lastResult?: Record<string, unknown> | null;
     activeTask?: string;
     [key: string]: unknown;
@@ -59,23 +61,31 @@ export interface Lp1Directive {
         kind: string;
         email: string;
         at: string;
-    };
+    } | boolean;
     createdAt?: string;
     at?: string;
     expiresAt?: string;
-    status?: 'new' | 'acked' | 'active' | 'done' | 'rejected';
+    status?: 'new' | 'acked' | 'active' | 'done' | 'rejected' | 'failed' | 'cancelled';
     refs?: unknown[];
     [key: string]: unknown;
 }
 export interface Lp1Tick {
-    id: string;
+    id?: string;
+    chainId?: string;
     lane: string;
     runId?: string;
+    tick?: number;
     startedAt?: string;
+    endedAt?: string;
     at?: string;
     durationMs?: number;
     packBytes?: number;
     decision?: string;
+    decisions?: Array<{
+        type: string;
+        [key: string]: unknown;
+    }>;
+    result?: Record<string, unknown> | null;
     text?: string;
     outcome?: string;
     evidence?: string;
@@ -138,7 +148,7 @@ export declare class LoopClient {
         to?: string;
         expiresAt?: string;
     }): Promise<Record<string, unknown>>;
-    controlLoop(loopId: string, action: 'pause' | 'resume' | 'step' | 'stop', reason?: string): Promise<Record<string, unknown>>;
+    controlLoop(loopId: string, action: 'pause' | 'resume' | 'run' | 'step' | 'stop', reason?: string): Promise<Record<string, unknown>>;
     queryLedger(loopId: string, options?: {
         type?: 'all' | 'tick' | 'event' | 'directive';
         limit?: number;
