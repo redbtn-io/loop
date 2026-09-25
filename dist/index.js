@@ -66,7 +66,7 @@ export const LOOP_ATTACHABLE_TOOLS = [
                 },
                 action: {
                     type: 'string',
-                    enum: ['pause', 'resume', 'step', 'stop'],
+                    enum: ['pause', 'resume', 'run', 'step', 'stop'],
                     description: 'Lifecycle transition to execute.',
                 },
                 reason: {
