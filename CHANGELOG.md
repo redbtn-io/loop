@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 (2026-09-25)
+
+- Align Lp1Tick with LP-1 protocol: make id optional, add chainId, tick, endedAt, decisions array, and structured result object.
+- Align LaneStatus with LP-1 protocol: add blocked to health status, add runId and chainId.
+- Align Lp1Control.nextTickAt: support per-lane map Record<string, string> per LP-1 section 3.1.
+- Align Lp1Directive.status: add cancelled status; support expiresAt on directives.
+- Add run action to loop_control tool definition and controlLoop client method.
+
 ## 0.1.1 (2026-09-25)
 
 - Align Lp1Spec with server LoopSpec: include lp, loopId, name, owner, mission, and lanes.
