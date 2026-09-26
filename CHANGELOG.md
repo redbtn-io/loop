@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 (2026-09-26)
+
+- Add canonical Config types for redOps and redLoop: ConfigFieldType, ConfigScope, ConfigSelectOption, ConfigFieldDefinition, LaneConfig, and LoopConfig.
+- Support spec.config on Lp1Spec for loop lane configuration.
+
 ## 0.1.2 (2026-09-25)
 
 - Align Lp1Tick with LP-1 protocol: make id optional, add chainId, tick, endedAt, decisions array, and structured result object.
