@@ -22,6 +22,65 @@ export interface Lp1Spec {
   owner?: string;
   mission?: string;
   lanes: LaneSpec[];
+  config?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export type ConfigFieldType =
+  | 'select'
+  | 'multiselect'
+  | 'string'
+  | 'text'
+  | 'number'
+  | 'integer'
+  | 'boolean'
+  | 'model'
+  | 'secret-ref'
+  | 'duration'
+  | 'json';
+
+export type ConfigScope =
+  | 'operation'
+  | `step:${string}`
+  | `lane:${string}`
+  | string;
+
+export interface ConfigSelectOption {
+  value: string;
+  label: string;
+  description?: string;
+  hint?: string;
+}
+
+export interface ConfigFieldDefinition {
+  key: string;
+  label: string;
+  description?: string;
+  type: ConfigFieldType;
+  default?: unknown;
+  value?: unknown;
+  options?: ConfigSelectOption[];
+  min?: number;
+  max?: number;
+  step?: number;
+  required?: boolean;
+  secret?: boolean;
+  scope: ConfigScope;
+}
+
+export interface LaneConfig {
+  laneId: string;
+  model?: string;
+  interval?: string;
+  maxConcurrentTasks?: number;
+  enabled?: boolean;
+  fields?: ConfigFieldDefinition[];
+  [key: string]: unknown;
+}
+
+export interface LoopConfig {
+  lanes?: Record<string, LaneConfig>;
+  fields?: ConfigFieldDefinition[];
   [key: string]: unknown;
 }
 
