@@ -7,12 +7,13 @@
 #   - the PR is converted to a DRAFT. GitHub refuses to merge a draft (web UI,
 #     `gh pr merge` and the REST API), which also holds in private repos where
 #     no ruleset can be applied. Marking it ready while held re-drafts it.
-# Removing the label releases the hold: the check passes and a draft that this
-# workflow created is marked ready again.
+# Removing the label releases the hold: the check passes, a draft that this
+# workflow created is marked ready again, and this workflow's earlier failed
+# runs on the same commit are deleted so no stale failure lingers on the PR.
 #
 # Without the label the job is skipped, which GitHub reports as a success, so
-# ordinary PRs pass this check without using a runner. Runs are serialised per
-# PR (never cancelled mid-way) so the last event decides the final state.
+# ordinary PRs pass this check without using a runner. Jobs that do run are
+# serialised per PR, so the last event decides the final state.
 name: do-not-merge
 
 on:
@@ -21,10 +22,6 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: do-not-merge-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
-
 jobs:
   do-not-merge:
     if: >-
@@ -32,9 +29,13 @@ jobs:
       (github.event.action == 'unlabeled' && github.event.label.name == 'do-not-merge')
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    concurrency:
+      group: do-not-merge-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     permissions:
-      contents: write
-      pull-requests: write
+      actions: write        # delete this workflow's stale failed runs on release
+      contents: write       # convertPullRequestToDraft is refused without it
+      pull-requests: write  # draft / ready-for-review
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -42,18 +43,19 @@ jobs:
       PR_ID: ${{ github.event.pull_request.node_id }}
       EVENT_HELD: ${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}
       EVENT_DRAFT: ${{ github.event.pull_request.draft }}
+      EVENT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Enforce or release the hold
         run: |
           set -u
           # Decide from the PR as it is now, not as it was when the event fired.
           if state=$(gh api "repos/$GH_REPO/pulls/$PR" \
-              --jq '"\(any(.labels[]; .name == "do-not-merge")) \(.draft)"' 2>/dev/null) \
+              --jq '"\(any(.labels[]; .name == "do-not-merge")) \(.draft) \(.head.sha)"' 2>/dev/null) \
               && [ -n "$state" ]; then
-            read -r held draft <<<"$state"
+            read -r held draft sha <<<"$state"
           else
             echo "::warning::Could not read the PR from the API; deciding from the event payload."
-            held="$EVENT_HELD"; draft="$EVENT_DRAFT"
+            held="$EVENT_HELD"; draft="$EVENT_DRAFT"; sha="$EVENT_SHA"
           fi
 
           if [ "$held" = "true" ]; then
@@ -99,5 +101,18 @@ jobs:
                 echo "Left as a draft: it was not drafted by this workflow (last drafted by '${actor:-unknown}')."
                 ;;
             esac
+          fi
+
+          # Delete this workflow's earlier failed/cancelled runs on this commit:
+          # some tools (RedRun's promote, statusCheckRollup readers) read every
+          # check run on the commit, not just the newest one per name.
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ] && [ -n "$sha" ]; then
+            stale=$(gh api "repos/$GH_REPO/actions/workflows/do-not-merge.yml/runs?head_sha=$sha&per_page=100" \
+              --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID}) | select(.conclusion == \"failure\" or .conclusion == \"cancelled\" or .conclusion == \"timed_out\") | .id" 2>/dev/null || true)
+            for run in $stale; do
+              gh api -X DELETE "repos/$GH_REPO/actions/runs/$run" >/dev/null 2>&1 \
+                && echo "Deleted stale run $run." \
+                || echo "::warning::Could not delete stale run $run."
+            done
           fi
           echo "No do-not-merge label: OK to merge."
